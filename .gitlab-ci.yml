@@ -2,14 +2,20 @@
 stages:
   - test
   - release
+  - build
 
 variables:
   SEMVER_PREFIX: v
+  CONTAINER_FILE_LOCATION: "Containerfile"
+  KANIKO_ARGS: --destination ${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}
 
 .go_template_defaults:
   stage: test
 .semver_template_defaults:
   stage: release
+.kaniko_template_defaults:
+  stage: build
 include:
   - { project: bonsai-oss/organization/automate/ci-templates, file: templates/language/go.yml }
   - { project: bonsai-oss/organization/automate/ci-templates, file: templates/release/semver.yml }
+  - { project: bonsai-oss/organization/automate/ci-templates, file: templates/release/kaniko.yml }
