@@ -1,0 +1,15 @@
+---
+stages:
+  - test
+  - release
+
+variables:
+  SEMVER_PREFIX: v
+
+.go_template_defaults:
+  stage: test
+.semver_template_defaults:
+  stage: release
+include:
+  - { project: bonsai-oss/organization/automate/ci-templates, file: templates/language/go.yml }
+  - { project: bonsai-oss/organization/automate/ci-templates, file: templates/release/semver.yml }
