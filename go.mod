@@ -1,4 +1,4 @@
-module hcloud-machine-provider
+module github.com/bonsai-oss/hetzner-machine-provider
 
 go 1.20
 

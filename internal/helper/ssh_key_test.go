@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"hcloud-machine-provider/internal/helper"
+	"github.com/bonsai-oss/hetzner-machine-provider/internal/helper"
 )
 
 func TestGenerateSSHKeyPair(t *testing.T) {

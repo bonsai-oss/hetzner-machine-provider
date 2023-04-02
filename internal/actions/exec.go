@@ -8,7 +8,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 
-	"hcloud-machine-provider/internal/helper"
+	"github.com/bonsai-oss/hetzner-machine-provider/internal/helper"
 )
 
 func Exec(cmdFile, stageName string) error {
