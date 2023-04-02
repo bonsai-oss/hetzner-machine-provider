@@ -1,5 +1,4 @@
 build: export GOOS=linux
-build: export GOARCH=amd64
 build: export CGO_ENABLED=0
 
 NAME := "hmp"

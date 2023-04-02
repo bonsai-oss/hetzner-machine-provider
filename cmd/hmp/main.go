@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -8,7 +9,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/hetznercloud/hcloud-go/hcloud"
 
-	"hcloud-machine-provider/internal/actions"
+	"github.com/bonsai-oss/hetzner-machine-provider/internal/actions"
 )
 
 var version = "dev"
@@ -21,11 +22,13 @@ type application struct {
 	execStageName  string
 
 	hcloudClient *hcloud.Client
+
+	vmParams actions.VMParams
 }
 
 func (a *application) prepare(_ *kingpin.ParseContext) error {
 	color.Green("🚀 Preparing environment")
-	return actions.Prepare(a.hcloudClient, a.jobID)
+	return actions.Prepare(a.hcloudClient, a.jobID, a.vmParams)
 }
 
 func (a *application) cleanup(_ *kingpin.ParseContext) error {
@@ -37,6 +40,19 @@ func (a *application) exec(_ *kingpin.ParseContext) error {
 	return actions.Exec(a.execScriptPath, a.execStageName)
 }
 
+func (a *application) configure(_ *kingpin.ParseContext) error {
+	// see https://docs.gitlab.com/runner/executors/custom.html#config for more information
+	data := map[string]any{
+		"driver": map[string]any{
+			"name":    "hmp",
+			"version": version,
+		},
+		"hostname": "🔭 hmp @ " + os.Getenv("HOSTNAME"),
+	}
+
+	return json.NewEncoder(os.Stdout).Encode(data)
+}
+
 func (a *application) prepareClient(_ *kingpin.ParseContext) error {
 	a.hcloudClient = hcloud.NewClient(hcloud.WithToken(a.hcloudToken), hcloud.WithApplication("hmp", version))
 	return nil
@@ -45,9 +61,12 @@ func (a *application) prepareClient(_ *kingpin.ParseContext) error {
 func main() {
 	var app application
 
-	kingpinApp := kingpin.New("hmp", "hcloud-machine-provider")
+	kingpinApp := kingpin.New("hmp", "hetzner-machine-provider")
 	kingpinApp.HelpFlag.Short('h')
 	kingpinApp.Version(version)
+	kingpinApp.Flag("vm.image", "vm image").Envar("CUSTOM_ENV_CI_JOB_IMAGE").Default("ubuntu-22.04").StringVar(&app.vmParams.Image)
+	kingpinApp.Flag("vm.type", "vm type").Envar("CUSTOM_ENV_HCLOUD_SERVER_TYPE").Default("ccx12").StringVar(&app.vmParams.Type)
+	kingpinApp.Flag("vm.location", "vm location").Envar("CUSTOM_ENV_HCLOUD_SERVER_LOCATION").Default("fsn1").StringVar(&app.vmParams.Location)
 
 	prepareCmd := kingpinApp.Command("prepare", "prepare the environment").PreAction(app.prepareClient).Action(app.prepare)
 	prepareCmd.Flag("hcloud-token", "hcloud token").Envar("HCLOUD_TOKEN").Required().StringVar(&app.hcloudToken)
@@ -60,6 +79,8 @@ func main() {
 	execCmd := kingpinApp.Command("exec", "execute a command").Action(app.exec)
 	execCmd.Arg("scriptPath", "script to execute").Required().StringVar(&app.execScriptPath)
 	execCmd.Arg("stageName", "stage name").Required().StringVar(&app.execStageName)
+
+	kingpinApp.Command("configure", "configure the environment").Action(app.configure)
 
 	_, err := kingpinApp.Parse(os.Args[1:])
 	if err != nil {

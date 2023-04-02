@@ -3,12 +3,17 @@ package actions
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/hetznercloud/hcloud-go/hcloud"
 
-	"hcloud-machine-provider/internal/helper"
+	"github.com/bonsai-oss/hetzner-machine-provider/internal/helper"
 )
+
+type VMParams struct {
+	Image    string
+	Type     string
+	Location string
+}
 
 const userData = `
 #cloud-config
@@ -22,7 +27,7 @@ runcmd:
   - reboot
 `
 
-func Prepare(client *hcloud.Client, jobID string) error {
+func Prepare(client *hcloud.Client, jobID string, params VMParams) error {
 	privateKey, pub, generateSSHKeyError := helper.GenerateSSHKeyPair()
 	if generateSSHKeyError != nil {
 		return generateSSHKeyError
@@ -42,27 +47,21 @@ func Prepare(client *hcloud.Client, jobID string) error {
 	}
 	defer client.SSHKey.Delete(context.Background(), hcloudSSHKey)
 
-	imageName := "ubuntu-22.04"
-	envImageName := os.Getenv("$CUSTOM_ENV_CI_JOB_IMAGE")
-	if envImageName != "" {
-		imageName = envImageName
-	}
-
 	fmt.Println("🔧 Create ci server")
 	createResult, _, serverCreateError := client.Server.Create(context.Background(), hcloud.ServerCreateOpts{
 		Name: helper.ResourceName(jobID),
 		ServerType: &hcloud.ServerType{
-			Name: "ccx12",
+			Name: params.Type,
 		},
 		Labels: map[string]string{"managed-by": "hmp"},
 		SSHKeys: []*hcloud.SSHKey{
 			hcloudSSHKey,
 		},
 		Location: &hcloud.Location{
-			Name: "fsn1",
+			Name: params.Location,
 		},
 		Image: &hcloud.Image{
-			Name: imageName,
+			Name: params.Image,
 		},
 		UserData: userData,
 	})

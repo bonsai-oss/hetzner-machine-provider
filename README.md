@@ -1,10 +1,17 @@
-# hcloud-machine-provider
+# hetzner-machine-provider
 
 This is a provider for gitlab custom runners. It uses the Hetzner Cloud API to create and delete servers for using them inside the ci.
+So, the CI behaves like in github actions with their "per-job" VMs.
 
 ## Usage
-You need to configure the following environment variables:
+You need to configure the following environment variable for your gitlab runner:
 - **HCLOUD_TOKEN**: The API token for the Hetzner Cloud API, must have the permissions to create and delete servers
+
+Optional environment variables used in ci config:
+- **HCLOUD_SERVER_TYPE**: The server type to use, defaults to `ccx21`
+- **HCLOUD_SERVER_LOCATION**: The location to use, defaults to `fsn1`
+
+You can set the image to use by setting the `image` property in the `.gitlab-ci.yml` file. If you don't set it, it will default to `ubuntu-22.04`.
 
 You need to configure the following in the runner config:
 ```toml

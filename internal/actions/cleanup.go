@@ -7,7 +7,7 @@ import (
 
 	"github.com/hetznercloud/hcloud-go/hcloud"
 
-	"hcloud-machine-provider/internal/helper"
+	"github.com/bonsai-oss/hetzner-machine-provider/internal/helper"
 )
 
 func Cleanup(client *hcloud.Client, jobID string) error {
