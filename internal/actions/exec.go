@@ -37,22 +37,30 @@ func Exec(cmdFile, stageName string) error {
 		retry.Delay(5*time.Second),
 		retry.LastErrorOnly(true),
 	)
-
 	if finalError != nil {
 		return finalError
 	}
 
-	sshClient, sshClientError := helper.NewSSHClient(state.SSHPrivateKey, state.ServerAddress, 22)
-	if sshClientError != nil {
-		return sshClientError
+	var sshClient *helper.SSHClient
+
+	clientConnectError := retry.Do(
+		func() error {
+			var sshClientError error
+			sshClient, sshClientError = helper.NewSSHClient(state.SSHPrivateKey, state.ServerAddress, 22)
+			return sshClientError
+		},
+		retry.Attempts(3),
+		retry.Delay(10*time.Second),
+		retry.LastErrorOnly(true),
+		retry.OnRetry(func(n uint, err error) {
+			fmt.Printf("❌ failed to connect, retrying (%d): %s\n", n, err.Error())
+		}),
+	)
+	if clientConnectError != nil {
+		return clientConnectError
 	}
 	defer sshClient.Close()
 
-	content, _ := os.ReadFile(cmdFile)
-	errod := sshClient.RunCommand(context.Background(), string(content))
-	if errod != nil {
-		return errod
-	}
-
-	return nil
+	scriptContent, _ := os.ReadFile(cmdFile)
+	return sshClient.RunCommand(context.Background(), string(scriptContent))
 }
