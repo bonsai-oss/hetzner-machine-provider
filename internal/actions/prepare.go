@@ -18,14 +18,15 @@ type VMParams struct {
 
 const userData = `
 #cloud-config
-package_update: false
-package_upgrade: false
+packages:
+  - git
+  - git-lfs
+  - curl
 runcmd:
-  - systemctl stop sshd
-  - apt update && apt install -y ca-certificates git git-lfs curl
-  - curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64"
-  - chmod +x /usr/local/bin/gitlab-runner
-  - reboot
+  - curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64" && chmod +x /usr/local/bin/gitlab-runner
+  - sed -i 's/#Port 22/Port 2222/g' /etc/ssh/sshd_config
+  - systemctl restart sshd
+  - echo -n "\n--- CI Server is ready ---" > /dev/tty1
 `
 
 func Prepare(client *hcloud.Client, jobID string, params VMParams) error {
@@ -83,7 +84,7 @@ func Prepare(client *hcloud.Client, jobID string, params VMParams) error {
 	}
 
 	if createResult.Server == nil {
-		return fmt.Errorf("server is nil")
+		return fmt.Errorf("server is not found")
 	}
 
 	state := helper.State{
