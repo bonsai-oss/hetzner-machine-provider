@@ -3,6 +3,7 @@ package actions
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/hetznercloud/hcloud-go/hcloud"
 
@@ -47,13 +48,24 @@ func Prepare(client *hcloud.Client, jobID string, params VMParams) error {
 	}
 	defer client.SSHKey.Delete(context.Background(), hcloudSSHKey)
 
+	// Assign server labels from environment variables
+	labels := map[string]string{"managed-by": "hmp"}
+	assignLabels(labels, map[string]string{
+		"commit-ref":  "CUSTOM_ENV_CI_COMMIT_REF_NAME",
+		"commit-sha":  "CUSTOM_ENV_CI_COMMIT_SHA",
+		"job-id":      "CUSTOM_ENV_CI_JOB_ID",
+		"pipeline-id": "CUSTOM_ENV_CI_PIPELINE_ID",
+		"project-id":  "CUSTOM_ENV_CI_PROJECT_ID",
+		"tag":         "CUSTOM_ENV_CI_COMMIT_TAG",
+	})
+
 	fmt.Println("🔧 Create ci server")
 	createResult, _, serverCreateError := client.Server.Create(context.Background(), hcloud.ServerCreateOpts{
 		Name: helper.ResourceName(jobID),
 		ServerType: &hcloud.ServerType{
 			Name: params.Type,
 		},
-		Labels: map[string]string{"managed-by": "hmp"},
+		Labels: labels,
 		SSHKeys: []*hcloud.SSHKey{
 			hcloudSSHKey,
 		},
@@ -80,4 +92,13 @@ func Prepare(client *hcloud.Client, jobID string, params VMParams) error {
 	}
 
 	return state.WriteToFile(helper.StatePath)
+}
+
+// assignLabels assigns values from environment variables to server labels
+func assignLabels(labels map[string]string, labelEnvironmentVariableMapping map[string]string) {
+	for label, environmentVariable := range labelEnvironmentVariableMapping {
+		if value, variableIsSet := os.LookupEnv(environmentVariable); variableIsSet {
+			labels[label] = value
+		}
+	}
 }
