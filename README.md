@@ -28,6 +28,8 @@ shutdown_timeout = 0
   builds_dir = "/builds"
   cache_dir = "/cache"
   [runners.custom]
+    config_exec = "/<path-to-hmp>/hmp"
+    config_args = ["configure"]
     prepare_exec = "/<path-to-hmp>/hmp"
     prepare_args = ["prepare"]
     run_exec = "/<path-to-hmp>/hmp"
