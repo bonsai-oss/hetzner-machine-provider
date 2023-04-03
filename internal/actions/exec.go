@@ -23,7 +23,7 @@ func Exec(cmdFile, stageName string) error {
 
 	finalError := retry.Do(
 		func() error {
-			sshClient, sshClientError := helper.NewSSHClient(state.SSHPrivateKey, state.ServerAddress, 22)
+			sshClient, sshClientError := helper.NewSSHClient(state.SSHPrivateKey, state.ServerAddress, helper.CustomSSHPort)
 			if sshClientError != nil {
 				return sshClientError
 			}
@@ -33,8 +33,8 @@ func Exec(cmdFile, stageName string) error {
 		retry.OnRetry(func(n uint, err error) {
 			fmt.Printf("⏳ retrying (%d): %s\n", n, err.Error())
 		}),
-		retry.Attempts(10),
-		retry.Delay(5*time.Second),
+		retry.Attempts(20),
+		retry.Delay(1*time.Second),
 		retry.LastErrorOnly(true),
 	)
 	if finalError != nil {
@@ -46,7 +46,7 @@ func Exec(cmdFile, stageName string) error {
 	clientConnectError := retry.Do(
 		func() error {
 			var sshClientError error
-			sshClient, sshClientError = helper.NewSSHClient(state.SSHPrivateKey, state.ServerAddress, 22)
+			sshClient, sshClientError = helper.NewSSHClient(state.SSHPrivateKey, state.ServerAddress, helper.CustomSSHPort)
 			return sshClientError
 		},
 		retry.Attempts(3),

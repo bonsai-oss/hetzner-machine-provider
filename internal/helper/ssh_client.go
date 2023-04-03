@@ -14,6 +14,8 @@ type SSHClient struct {
 	client *ssh.Client
 }
 
+const CustomSSHPort = 2222
+
 func NewSSHClient(privateKeyStr, serverIP string, port uint16) (*SSHClient, error) {
 	client, err := connectSSH(privateKeyStr, serverIP, port)
 	if err != nil {
@@ -37,7 +39,7 @@ func connectSSH(privateKeyStr, serverIP string, port uint16) (*ssh.Client, error
 			ssh.PublicKeys(privateKey),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         1 * time.Second,
+		Timeout:         500 * time.Millisecond,
 	}
 
 	// Connect to the SSH server
