@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/hetznercloud/hcloud-go/hcloud"
 
@@ -60,6 +62,31 @@ func Prepare(client *hcloud.Client, jobID string, params VMParams) error {
 		"tag":         "CUSTOM_ENV_CI_COMMIT_TAG",
 	})
 
+	image := hcloud.Image{}
+
+	// if the image selector is a label selector, we need to get the image ID
+	if strings.Contains(params.Image, "=") {
+		images, _, imageGetError := client.Image.List(context.Background(), hcloud.ImageListOpts{
+			Type: []hcloud.ImageType{hcloud.ImageTypeSnapshot, hcloud.ImageTypeSystem},
+			ListOpts: hcloud.ListOpts{
+				LabelSelector: params.Image,
+			},
+			Status: []hcloud.ImageStatus{hcloud.ImageStatusAvailable},
+		})
+		if imageGetError != nil {
+			return imageGetError
+		}
+		if len(images) == 0 {
+			return fmt.Errorf("no images found for label selector %+q", params.Image)
+		}
+		sort.SliceStable(images, func(i, j int) bool {
+			return images[i].Created.After(images[j].Created)
+		})
+		image.ID = images[0].ID
+	} else {
+		image.Name = params.Image
+	}
+
 	fmt.Println("🔧 Create ci server")
 	createResult, _, serverCreateError := client.Server.Create(context.Background(), hcloud.ServerCreateOpts{
 		Name: helper.ResourceName(jobID),
@@ -73,9 +100,7 @@ func Prepare(client *hcloud.Client, jobID string, params VMParams) error {
 		Location: &hcloud.Location{
 			Name: params.Location,
 		},
-		Image: &hcloud.Image{
-			Name: params.Image,
-		},
+		Image:    &image,
 		UserData: userData,
 	})
 
