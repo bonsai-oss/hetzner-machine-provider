@@ -44,10 +44,10 @@ func (a *application) configure(_ *kingpin.ParseContext) error {
 	// see https://docs.gitlab.com/runner/executors/custom.html#config for more information
 	data := map[string]any{
 		"driver": map[string]any{
-			"name":    "hmp",
+			"name":    "hetzner-machine-provider",
 			"version": version,
 		},
-		"hostname": "🔭 hmp @ " + os.Getenv("HOSTNAME"),
+		"hostname": "🔭 hetzner-machine-provider @ " + os.Getenv("HOSTNAME"),
 	}
 
 	return json.NewEncoder(os.Stdout).Encode(data)
