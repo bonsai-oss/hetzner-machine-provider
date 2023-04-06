@@ -45,7 +45,7 @@ func connectSSH(privateKeyStr, serverIP string, port uint16) (*ssh.Client, error
 	// Connect to the SSH server
 	client, err := ssh.Dial("tcp", serverIP+":"+strconv.Itoa(int(port)), config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the SSH server: %w", err)
+		return nil, fmt.Errorf("cannot connect to SSH server: %w", err)
 	}
 
 	return client, nil

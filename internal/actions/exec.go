@@ -21,24 +21,10 @@ func Exec(cmdFile, stageName string) error {
 		return fmt.Errorf("incomplete state")
 	}
 
-	finalError := retry.Do(
-		func() error {
-			sshClient, sshClientError := helper.NewSSHClient(state.SSHPrivateKey, state.ServerAddress, helper.CustomSSHPort)
-			if sshClientError != nil {
-				return sshClientError
-			}
-			defer sshClient.Close()
-			return sshClient.RunCommand(context.Background(), "true")
-		},
-		retry.OnRetry(func(n uint, err error) {
-			fmt.Printf("⏳ retrying (%d): %s\n", n, err.Error())
-		}),
-		retry.Attempts(20),
-		retry.Delay(1*time.Second),
-		retry.LastErrorOnly(true),
-	)
-	if finalError != nil {
-		return finalError
+	waitDeadlineContext, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancel()
+	if err := helper.WaitReachable(waitDeadlineContext, state.SSHPrivateKey, state.ServerAddress); err != nil {
+		return err
 	}
 
 	var sshClient *helper.SSHClient
