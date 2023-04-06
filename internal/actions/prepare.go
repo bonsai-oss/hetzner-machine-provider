@@ -6,8 +6,10 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/hetznercloud/hcloud-go/hcloud"
+	"golang.org/x/crypto/ssh"
 
 	"github.com/bonsai-oss/hetzner-machine-provider/internal/helper"
 )
@@ -16,6 +18,11 @@ type VMParams struct {
 	Image    string
 	Type     string
 	Location string
+}
+
+type PrepareOptions struct {
+	JobID        string
+	WaitDeadline time.Duration
 }
 
 const userData = `
@@ -31,16 +38,22 @@ runcmd:
   - echo -n "\n--- CI Server is ready ---" > /dev/tty1
 `
 
-func Prepare(client *hcloud.Client, jobID string, params VMParams) error {
+func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) error {
 	privateKey, pub, generateSSHKeyError := helper.GenerateSSHKeyPair()
 	if generateSSHKeyError != nil {
 		return generateSSHKeyError
 	}
 
-	fmt.Println("🔧 Create SSH key pair")
+	fmt.Println("🔐 Create SSH key pair")
+	if pk, pkParseError := ssh.ParsePrivateKey([]byte(privateKey)); pkParseError != nil {
+		return pkParseError
+	} else {
+		fmt.Printf("\t\tFingerprint: %+v\n\n", ssh.FingerprintLegacyMD5(pk.PublicKey()))
+	}
+
 	// Create SSH key
 	hcloudSSHKey, _, keyCreateError := client.SSHKey.Create(context.Background(), hcloud.SSHKeyCreateOpts{
-		Name:      helper.ResourceName(jobID),
+		Name:      helper.ResourceName(options.JobID),
 		PublicKey: pub,
 		Labels: map[string]string{
 			"managed-by": "hmp",
@@ -87,9 +100,9 @@ func Prepare(client *hcloud.Client, jobID string, params VMParams) error {
 		image.Name = params.Image
 	}
 
-	fmt.Println("🔧 Create ci server")
+	fmt.Println("📠 Create CI server")
 	createResult, _, serverCreateError := client.Server.Create(context.Background(), hcloud.ServerCreateOpts{
-		Name: helper.ResourceName(jobID),
+		Name: helper.ResourceName(options.JobID),
 		ServerType: &hcloud.ServerType{
 			Name: params.Type,
 		},
@@ -103,14 +116,24 @@ func Prepare(client *hcloud.Client, jobID string, params VMParams) error {
 		Image:    &image,
 		UserData: userData,
 	})
-
 	if serverCreateError != nil {
+		fmt.Println("❌ Server creation failed")
 		return serverCreateError
 	}
 
 	if createResult.Server == nil {
+		fmt.Println("❌ Server creation failed")
 		return fmt.Errorf("server is not found")
 	}
+
+	fmt.Printf("⏳ Waiting %s for server to be ready\n", options.WaitDeadline)
+
+	waitDeadlineContext, cancel := context.WithTimeout(context.Background(), options.WaitDeadline)
+	defer cancel()
+	if waitReachableError := helper.WaitReachable(waitDeadlineContext, privateKey, createResult.Server.PublicNet.IPv4.IP.String()); waitReachableError != nil {
+		return waitReachableError
+	}
+	fmt.Println("✅ Server created")
 
 	state := helper.State{
 		ServerAddress: createResult.Server.PublicNet.IPv4.IP.String(),

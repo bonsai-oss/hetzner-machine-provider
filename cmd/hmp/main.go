@@ -24,11 +24,14 @@ type application struct {
 	hcloudClient *hcloud.Client
 
 	vmParams actions.VMParams
+
+	prepareOptions actions.PrepareOptions
 }
 
 func (a *application) prepare(_ *kingpin.ParseContext) error {
 	color.Green("🚀 Preparing environment")
-	return actions.Prepare(a.hcloudClient, a.jobID, a.vmParams)
+	a.prepareOptions.JobID = a.jobID
+	return actions.Prepare(a.hcloudClient, a.prepareOptions, a.vmParams)
 }
 
 func (a *application) cleanup(_ *kingpin.ParseContext) error {
@@ -71,6 +74,7 @@ func main() {
 	prepareCmd := kingpinApp.Command("prepare", "prepare the environment").PreAction(app.prepareClient).Action(app.prepare)
 	prepareCmd.Flag("hcloud-token", "hcloud token").Envar("HCLOUD_TOKEN").Required().StringVar(&app.hcloudToken)
 	prepareCmd.Flag("job-id", "job id").Envar("CI_JOB_ID").Envar("CUSTOM_ENV_CI_JOB_ID").Required().StringVar(&app.jobID)
+	prepareCmd.Flag("prepare.server-wait-deadline", "deadline for server to become reachable").Envar("CUSTOM_ENV_HMP_SERVER_WAIT_DEADLINE").Default("5m").DurationVar(&app.prepareOptions.WaitDeadline)
 
 	cleanupCmd := kingpinApp.Command("cleanup", "cleanup the environment").PreAction(app.prepareClient).Action(app.cleanup)
 	cleanupCmd.Flag("hcloud-token", "hcloud token").Envar("HCLOUD_TOKEN").Required().StringVar(&app.hcloudToken)
