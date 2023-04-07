@@ -11,6 +11,7 @@ Optional environment variables used in ci config:
 - **HCLOUD_SERVER_TYPE**: The server type to use, defaults to `ccx12`
 - **HCLOUD_SERVER_LOCATION**: The location to use, defaults to `fsn1`
 - **HMP_SERVER_WAIT_DEADLINE**: The time to wait for the server to be ready, defaults to `5m`
+- **HMP_ADDITIONAL_AUTHORIZED_KEYS**: Additional authorized keys to add to the server, defaults to `""`. Separate multiple keys with a newline (`\n`).
 
 You can set the image to use by setting the `image` property in the `.gitlab-ci.yml` file. If you don't set it, it will default to `ubuntu-22.04`.
 

@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/hetznercloud/hcloud-go/hcloud"
 	"golang.org/x/crypto/ssh"
 
+	"github.com/bonsai-oss/hetzner-machine-provider/assets"
 	"github.com/bonsai-oss/hetzner-machine-provider/internal/helper"
 )
 
@@ -21,22 +23,10 @@ type VMParams struct {
 }
 
 type PrepareOptions struct {
-	JobID        string
-	WaitDeadline time.Duration
+	JobID                    string
+	WaitDeadline             time.Duration
+	AdditionalAuthorizedKeys string
 }
-
-const userData = `
-#cloud-config
-packages:
-  - git
-  - git-lfs
-  - curl
-runcmd:
-  - curl -L --output /usr/local/bin/gitlab-runner "https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64" && chmod +x /usr/local/bin/gitlab-runner
-  - sed -i 's/#Port 22/Port 2222/g' /etc/ssh/sshd_config
-  - systemctl restart sshd
-  - echo -n "\n--- CI Server is ready ---" > /dev/tty1
-`
 
 func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) error {
 	privateKey, pub, generateSSHKeyError := helper.GenerateSSHKeyPair()
@@ -101,6 +91,14 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 	}
 
 	fmt.Println("📠 Create CI server")
+	userDataBuffer := &bytes.Buffer{}
+	userData := map[string]any{
+		"ssh_authorized_keys": strings.Split(options.AdditionalAuthorizedKeys, "\n"),
+	}
+	if userdataRenderError := assets.CloudInitTemplate.Execute(userDataBuffer, userData); userdataRenderError != nil {
+		return userdataRenderError
+	}
+
 	createResult, _, serverCreateError := client.Server.Create(context.Background(), hcloud.ServerCreateOpts{
 		Name: helper.ResourceName(options.JobID),
 		ServerType: &hcloud.ServerType{
@@ -114,7 +112,7 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 			Name: params.Location,
 		},
 		Image:    &image,
-		UserData: userData,
+		UserData: userDataBuffer.String(),
 	})
 	if serverCreateError != nil {
 		fmt.Println("❌ Server creation failed")
