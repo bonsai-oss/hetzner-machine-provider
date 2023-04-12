@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.3.2
 	github.com/avast/retry-go/v4 v4.3.3
 	github.com/fatih/color v1.15.0
-	github.com/hetznercloud/hcloud-go v1.41.0
+	github.com/hetznercloud/hcloud-go v1.42.0
 	golang.org/x/crypto v0.8.0
 )
 
