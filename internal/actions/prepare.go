@@ -54,6 +54,7 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 	}
 	defer client.SSHKey.Delete(context.Background(), hcloudSSHKey)
 
+	fmt.Println("📠 Create CI server")
 	// Assign server labels from environment variables
 	labels := map[string]string{"managed-by": "hmp"}
 	assignLabels(labels, map[string]string{
@@ -90,7 +91,6 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 		image.Name = params.Image
 	}
 
-	fmt.Println("📠 Create CI server")
 	userDataBuffer := &bytes.Buffer{}
 	userData := map[string]any{
 		"ssh_authorized_keys": strings.Split(options.AdditionalAuthorizedKeys, "\n"),
@@ -145,6 +145,15 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 func assignLabels(labels map[string]string, labelEnvironmentVariableMapping map[string]string) {
 	for label, environmentVariable := range labelEnvironmentVariableMapping {
 		if value, variableIsSet := os.LookupEnv(environmentVariable); variableIsSet {
+			labelValid, labelValidationError := hcloud.ValidateResourceLabels(map[string]any{label: value})
+			if labelValidationError != nil {
+				fmt.Printf("\t\t⚠️ Label validation failed: %+q\n", labelValidationError)
+				continue
+			}
+			if !labelValid {
+				continue
+			}
+
 			labels[label] = value
 		}
 	}
