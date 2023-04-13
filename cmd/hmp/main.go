@@ -67,15 +67,15 @@ func main() {
 	kingpinApp := kingpin.New("hmp", "hetzner-machine-provider")
 	kingpinApp.HelpFlag.Short('h')
 	kingpinApp.Version(version)
-	kingpinApp.Flag("vm.image", "vm image").Envar("CUSTOM_ENV_CI_JOB_IMAGE").Default("ubuntu-22.04").StringVar(&app.vmParams.Image)
-	kingpinApp.Flag("vm.type", "vm type").Envar("CUSTOM_ENV_HCLOUD_SERVER_TYPE").Default("ccx12").StringVar(&app.vmParams.Type)
-	kingpinApp.Flag("vm.location", "vm location").Envar("CUSTOM_ENV_HCLOUD_SERVER_LOCATION").Default("fsn1").StringVar(&app.vmParams.Location)
 
 	prepareCmd := kingpinApp.Command("prepare", "prepare the environment").PreAction(app.prepareClient).Action(app.prepare)
 	prepareCmd.Flag("hcloud-token", "hcloud token").Envar("HCLOUD_TOKEN").Required().StringVar(&app.hcloudToken)
 	prepareCmd.Flag("job-id", "job id").Envar("CI_JOB_ID").Envar("CUSTOM_ENV_CI_JOB_ID").Required().StringVar(&app.jobID)
 	prepareCmd.Flag("prepare.server-wait-deadline", "deadline for server to become reachable").Envar("CUSTOM_ENV_HMP_SERVER_WAIT_DEADLINE").Default("5m").DurationVar(&app.prepareOptions.WaitDeadline)
 	prepareCmd.Flag("prepare.additional-authorized-keys", "specify additional authorized keys separated by '\\n'").Envar("CUSTOM_ENV_HMP_ADDITIONAL_AUTHORIZED_KEYS").StringVar(&app.prepareOptions.AdditionalAuthorizedKeys)
+	prepareCmd.Flag("vm.image", "vm image").Envar("CUSTOM_ENV_CI_JOB_IMAGE").Default("ubuntu-22.04").StringVar(&app.vmParams.Image)
+	prepareCmd.Flag("vm.type", "vm type").Envar("CUSTOM_ENV_HCLOUD_SERVER_TYPE").Default("ccx12").StringVar(&app.vmParams.Type)
+	prepareCmd.Flag("vm.location", "vm location").Envar("CUSTOM_ENV_HCLOUD_SERVER_LOCATION").Default("fsn1").StringVar(&app.vmParams.Location)
 
 	cleanupCmd := kingpinApp.Command("cleanup", "cleanup the environment").PreAction(app.prepareClient).Action(app.cleanup)
 	cleanupCmd.Flag("hcloud-token", "hcloud token").Envar("HCLOUD_TOKEN").Required().StringVar(&app.hcloudToken)
