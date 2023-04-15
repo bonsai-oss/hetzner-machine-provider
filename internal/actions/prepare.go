@@ -91,20 +91,31 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 		image.Name = params.Image
 	}
 
+	serverType, _, serverTypeGetError := client.ServerType.GetByName(context.Background(), params.Type)
+	if serverTypeGetError != nil {
+		fmt.Printf("❌ Cannot fetch server information: %+q\n", serverTypeGetError)
+		return serverTypeGetError
+	}
+	fmt.Printf(
+		"\t\tType:  %+v [%s]\n\t\tImage: %+v\n",
+		serverType.Description,
+		determineArchitectureString(serverType.Architecture),
+		params.Image,
+	)
+
 	userDataBuffer := &bytes.Buffer{}
 	userData := map[string]any{
 		"ssh_authorized_keys": strings.Split(options.AdditionalAuthorizedKeys, "\n"),
+		"architecture":        determineArchitectureString(serverType.Architecture),
 	}
 	if userdataRenderError := assets.CloudInitTemplate.Execute(userDataBuffer, userData); userdataRenderError != nil {
 		return userdataRenderError
 	}
 
 	createResult, _, serverCreateError := client.Server.Create(context.Background(), hcloud.ServerCreateOpts{
-		Name: helper.ResourceName(options.JobID),
-		ServerType: &hcloud.ServerType{
-			Name: params.Type,
-		},
-		Labels: labels,
+		Name:       helper.ResourceName(options.JobID),
+		ServerType: serverType,
+		Labels:     labels,
 		SSHKeys: []*hcloud.SSHKey{
 			hcloudSSHKey,
 		},
@@ -139,6 +150,17 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 	}
 
 	return state.WriteToFile(helper.StatePath)
+}
+
+func determineArchitectureString(serverArchitecture hcloud.Architecture) string {
+	switch serverArchitecture {
+	case hcloud.ArchitectureX86:
+		return "amd64"
+	case hcloud.ArchitectureARM:
+		return "arm64"
+	}
+
+	return "amd64"
 }
 
 // assignLabels assigns values from environment variables to server labels
