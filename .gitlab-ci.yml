@@ -1,8 +1,8 @@
 ---
 stages:
   - test
-  - release
   - build
+  - release
 
 variables:
   SEMVER_PREFIX: v
@@ -19,3 +19,32 @@ include:
   - { project: bonsai-oss/organization/automate/ci-templates, file: templates/language/go.yml }
   - { project: bonsai-oss/organization/automate/ci-templates, file: templates/release/semver.yml }
   - { project: bonsai-oss/organization/automate/ci-templates, file: templates/release/kaniko.yml }
+
+build release binaries:
+  image: golang:1.20
+  stage: build
+  parallel:
+    matrix:
+      - GOOS: [linux, windows, darwin, freebsd, openbsd]
+        GOARCH: [amd64, arm64]
+  script:
+    - make build
+    - mv bin/hmp bin/hmp-${GOOS}-${GOARCH}
+  artifacts:
+    paths:
+      - bin/hmp-${GOOS}-${GOARCH}
+    expire_in: 1 hour
+
+release:
+  image: alpine:latest
+  stage: release
+  rules:
+    - if: $CI_COMMIT_TAG
+  needs:
+    - job: build release binaries
+      artifacts: true
+  script:
+    - ls -l bin
+  artifacts:
+    paths:
+      - bin
