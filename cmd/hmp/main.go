@@ -10,6 +10,7 @@ import (
 	"github.com/hetznercloud/hcloud-go/hcloud"
 
 	"github.com/bonsai-oss/hetzner-machine-provider/internal/actions"
+	"github.com/bonsai-oss/hetzner-machine-provider/internal/helper"
 )
 
 var version = "dev"
@@ -25,7 +26,8 @@ type application struct {
 
 	vmParams actions.VMParams
 
-	prepareOptions actions.PrepareOptions
+	resourceNamePrefix string
+	prepareOptions     actions.PrepareOptions
 }
 
 func (a *application) prepare(_ *kingpin.ParseContext) error {
@@ -67,6 +69,16 @@ func main() {
 	kingpinApp := kingpin.New("hmp", "hetzner-machine-provider")
 	kingpinApp.HelpFlag.Short('h')
 	kingpinApp.Version(version)
+	kingpinApp.Flag("resource-name-prefix", "cloud resource name prefix").Envar("CUSTOM_ENV_HMP_RESOURCE_NAME_PREFIX").Default("hmp-job-").StringVar(&app.resourceNamePrefix)
+
+	// set resource name prefix before any command is executed
+	kingpinApp.PreAction(func(_ *kingpin.ParseContext) error {
+		validationError := helper.SetResourceNamePrefix(app.resourceNamePrefix)
+		if validationError != nil {
+			fmt.Fprintf(os.Stderr, "❌ %s\n", validationError)
+		}
+		return validationError
+	})
 
 	prepareCmd := kingpinApp.Command("prepare", "prepare the environment").PreAction(app.prepareClient).Action(app.prepare)
 	prepareCmd.Flag("hcloud-token", "hcloud token").Envar("HCLOUD_TOKEN").Required().StringVar(&app.hcloudToken)
