@@ -5,6 +5,6 @@ COPY . .
 ENV CGO_ENABLED=0
 RUN make
 
-FROM alpine:3.17
+FROM alpine:3.18
 WORKDIR /app
 COPY --from=builder /build/bin/ .
