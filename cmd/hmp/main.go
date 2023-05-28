@@ -86,8 +86,7 @@ func main() {
 	prepareCmd.Flag("prepare.server-wait-deadline", "deadline for server to become reachable").Envar("CUSTOM_ENV_HMP_SERVER_WAIT_DEADLINE").Default("5m").DurationVar(&app.prepareOptions.WaitDeadline)
 	prepareCmd.Flag("prepare.additional-authorized-keys", "specify additional authorized keys separated by '\\n'").Envar("CUSTOM_ENV_HMP_ADDITIONAL_AUTHORIZED_KEYS").StringVar(&app.prepareOptions.AdditionalAuthorizedKeys)
 	prepareCmd.Flag("vm.image", "vm image").Envar("CUSTOM_ENV_CI_JOB_IMAGE").Default("ubuntu-22.04").StringVar(&app.vmParams.Image)
-	// TODO: move to automated vm type selection by default
-	prepareCmd.Flag("vm.type", "vm type").Envar("CUSTOM_ENV_HCLOUD_SERVER_TYPE").Default("ccx12").StringVar(&app.vmParams.Type)
+	prepareCmd.Flag("vm.type", "vm type").Envar("CUSTOM_ENV_HCLOUD_SERVER_TYPE").Default("auto").StringVar(&app.vmParams.Type)
 	prepareCmd.Flag("vm.architecture", "vm architecture (only beeing used on vm.type 'auto'").Default("amd64").Envar("CUSTOM_ENV_HCLOUD_SERVER_ARCHITECTURE").StringVar(&app.vmParams.Architecture)
 	prepareCmd.Flag("vm.location", "vm location").Envar("CUSTOM_ENV_HCLOUD_SERVER_LOCATION").Default("fsn1").StringVar(&app.vmParams.Location)
 
