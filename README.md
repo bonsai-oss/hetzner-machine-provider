@@ -9,6 +9,7 @@ You need to configure the following environment variable for your gitlab runner:
 
 Optional environment variables used in ci config:
 - **HCLOUD_SERVER_TYPE**: The server type to use, defaults to `ccx12`
+- **HCLOUD_SERVER_ARCHITECTURE**: The architecture to use for the server, only being used if `HCLOUD_SERVER_TYPE` is set to `auto`, defaults to `amd64`
 - **HCLOUD_SERVER_LOCATION**: The location to use, defaults to `fsn1`
 - **HMP_SERVER_WAIT_DEADLINE**: The time to wait for the server to be ready, defaults to `5m`
 - **HMP_ADDITIONAL_AUTHORIZED_KEYS**: Additional authorized keys to add to the server, defaults to `""`. Separate multiple keys with a newline (`\n`).
