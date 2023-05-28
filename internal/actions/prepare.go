@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -17,9 +18,10 @@ import (
 )
 
 type VMParams struct {
-	Image    string
-	Type     string
-	Location string
+	Image        string
+	Type         string
+	Location     string
+	Architecture string
 }
 
 type PrepareOptions struct {
@@ -91,9 +93,15 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 		image.Name = params.Image
 	}
 
-	serverType, _, serverTypeGetError := client.ServerType.GetByName(context.Background(), params.Type)
+	var serverType *hcloud.ServerType
+	var serverTypeGetError error
+	if params.Type == "auto" {
+		serverType, serverTypeGetError = automaticServerSelection(client, params.Architecture, params.Location)
+	} else {
+		serverType, _, serverTypeGetError = client.ServerType.GetByName(context.Background(), params.Type)
+	}
 	if serverTypeGetError != nil {
-		fmt.Printf("❌ Cannot fetch server information: %+q\n", serverTypeGetError)
+		fmt.Print("❌ Cannot determine server details: ")
 		return serverTypeGetError
 	}
 	fmt.Printf(
@@ -161,6 +169,61 @@ func determineArchitectureString(serverArchitecture hcloud.Architecture) string 
 	}
 
 	return "amd64"
+}
+
+// getServerClassification determines server classification by server type name to be sortable (e.g. "cx11" -> "11")
+func getServerClassification(server string) string {
+	return regexp.MustCompile(`\d+`).FindString(server)
+}
+
+// getAvailableServerTypesByLocation determines datacenters in provided location and get available server types
+func getAvailableServerTypesByLocation(client *hcloud.Client, locationName string) ([]*hcloud.ServerType, error) {
+	datacenters, _, fetchDatacentersError := client.Datacenter.List(context.Background(), hcloud.DatacenterListOpts{})
+	if fetchDatacentersError != nil {
+		return nil, fetchDatacentersError
+	}
+	datacenters = helper.Filter(datacenters, func(datacenter *hcloud.Datacenter) bool {
+		return datacenter.Location.Name == locationName
+	})
+	if len(datacenters) == 0 || datacenters == nil {
+		return nil, fmt.Errorf("no datacenters found for location %s", locationName)
+	}
+
+	datacenter := datacenters[0]
+	if len(datacenter.ServerTypes.Available) == 0 {
+		return nil, fmt.Errorf("no server types available in %s", locationName)
+	}
+
+	return helper.Map(datacenter.ServerTypes.Available, func(availableServerType *hcloud.ServerType) *hcloud.ServerType {
+		serverType, _, getServerTypeError := client.ServerType.GetByID(context.Background(), availableServerType.ID)
+		if getServerTypeError != nil {
+			return nil
+		}
+		return serverType
+	}), nil
+}
+
+// automaticServerSelection selects a server type based on the architecture and CPU type
+func automaticServerSelection(client *hcloud.Client, architecture string, location string) (*hcloud.ServerType, error) {
+	serverTypes, serverTypeListError := getAvailableServerTypesByLocation(client, location)
+	if serverTypeListError != nil {
+		return nil, serverTypeListError
+	}
+	// filter server types by architecture and CPU type
+	possibleServerTypes := helper.Filter(serverTypes, func(serverType *hcloud.ServerType) bool {
+		return determineArchitectureString(serverType.Architecture) == architecture && serverType.CPUType == hcloud.CPUTypeShared
+	})
+
+	if len(possibleServerTypes) == 0 {
+		return nil, fmt.Errorf("no server type found for architecture %+q", architecture)
+	}
+
+	// sort server types by classification (e.g. cx11, cx21, cx31, ...)
+	sort.SliceStable(possibleServerTypes, func(i, j int) bool {
+		return getServerClassification(possibleServerTypes[i].Name) > getServerClassification(possibleServerTypes[j].Name)
+	})
+	// get the server located in the middle of the list of possible server types
+	return possibleServerTypes[len(possibleServerTypes)/2], nil
 }
 
 // assignLabels assigns values from environment variables to server labels
