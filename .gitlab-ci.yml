@@ -21,7 +21,7 @@ include:
   - { project: bonsai-oss/organization/automate/ci-templates, file: templates/release/kaniko.yml }
 
 build release binaries:
-  image: golang:1.20
+  image: golang:1.21
   stage: build
   parallel:
     matrix:
