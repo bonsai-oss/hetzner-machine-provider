@@ -4,10 +4,10 @@ go 1.20
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.3.2
-	github.com/avast/retry-go/v4 v4.3.4
+	github.com/avast/retry-go/v4 v4.5.0
 	github.com/fatih/color v1.15.0
-	github.com/hetznercloud/hcloud-go v1.47.0
-	golang.org/x/crypto v0.11.0
+	github.com/hetznercloud/hcloud-go v1.48.0
+	golang.org/x/crypto v0.12.0
 )
 
 require (
@@ -23,8 +23,8 @@ require (
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
-	golang.org/x/net v0.11.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
-	golang.org/x/text v0.11.0 // indirect
+	golang.org/x/net v0.12.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/text v0.12.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 )
