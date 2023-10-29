@@ -6,8 +6,8 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.3.2
 	github.com/avast/retry-go/v4 v4.5.0
 	github.com/fatih/color v1.15.0
-	github.com/hetznercloud/hcloud-go v1.50.0
-	golang.org/x/crypto v0.13.0
+	github.com/hetznercloud/hcloud-go v1.52.0
+	golang.org/x/crypto v0.14.0
 )
 
 require (
@@ -24,7 +24,7 @@ require (
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	golang.org/x/net v0.12.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 )
