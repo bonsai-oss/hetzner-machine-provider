@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hetznercloud/hcloud-go/hcloud"
+	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 	"golang.org/x/crypto/ssh"
 
 	"github.com/bonsai-oss/hetzner-machine-provider/assets"

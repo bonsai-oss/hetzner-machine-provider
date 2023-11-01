@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hetznercloud/hcloud-go/hcloud"
+	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 
 	"github.com/bonsai-oss/hetzner-machine-provider/internal/helper"
 )
