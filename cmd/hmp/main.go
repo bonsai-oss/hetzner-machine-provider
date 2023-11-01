@@ -7,7 +7,7 @@ import (
 
 	"github.com/alecthomas/kingpin/v2"
 	"github.com/fatih/color"
-	"github.com/hetznercloud/hcloud-go/hcloud"
+	"github.com/hetznercloud/hcloud-go/v2/hcloud"
 
 	"github.com/bonsai-oss/hetzner-machine-provider/internal/actions"
 	"github.com/bonsai-oss/hetzner-machine-provider/internal/helper"
