@@ -20,6 +20,31 @@ include:
   - { project: bonsai-oss/organization/automate/ci-templates, file: templates/release/semver.yml }
   - { project: bonsai-oss/organization/automate/ci-templates, file: templates/release/kaniko.yml }
 
+integration test:
+  image: golang:1.22
+  stage: test
+  needs:
+    - go test
+  parallel:
+    matrix:
+      - CUSTOM_ENV_CI_JOB_IMAGE:
+          - debian-12
+          - ubuntu:latest
+        CUSTOM_ENV_HCLOUD_SERVER_TYPE:
+          - auto
+        CUSTOM_ENV_HCLOUD_SERVER_ARCHITECTURE:
+          - amd64
+          - arm64
+  before_script:
+    - make build
+  script:
+    - ./bin/hmp --version
+    - ./bin/hmp prepare --job-id "$CI_JOB_ID"
+    - ./bin/hmp exec <(echo -e '#!/usr/bin/env bash\ncat /etc/os-release') test1
+    - ./bin/hmp exec <(echo -e '#!/usr/bin/env bash\necho "Hello, World!"') test2 | grep "Hello, World!"
+  after_script:
+    - ./bin/hmp cleanup --job-id "$CI_JOB_ID"
+
 build release binaries:
   image: golang:1.22
   stage: build

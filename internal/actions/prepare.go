@@ -17,6 +17,9 @@ import (
 	"github.com/bonsai-oss/hetzner-machine-provider/internal/helper"
 )
 
+const labelSelectorPrefix = "label#"
+const latestImageSuffix = ":latest"
+
 type VMParams struct {
 	Image        string
 	Type         string
@@ -68,31 +71,6 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 		"tag":         "CUSTOM_ENV_CI_COMMIT_TAG",
 	})
 
-	image := hcloud.Image{}
-
-	// if the image selector is a label selector, we need to get the image ID
-	if strings.Contains(params.Image, "=") {
-		images, _, imageGetError := client.Image.List(context.Background(), hcloud.ImageListOpts{
-			Type: []hcloud.ImageType{hcloud.ImageTypeSnapshot, hcloud.ImageTypeSystem},
-			ListOpts: hcloud.ListOpts{
-				LabelSelector: params.Image,
-			},
-			Status: []hcloud.ImageStatus{hcloud.ImageStatusAvailable},
-		})
-		if imageGetError != nil {
-			return imageGetError
-		}
-		if len(images) == 0 {
-			return fmt.Errorf("no images found for label selector %+q", params.Image)
-		}
-		sort.SliceStable(images, func(i, j int) bool {
-			return images[i].Created.After(images[j].Created)
-		})
-		image.ID = images[0].ID
-	} else {
-		image.Name = params.Image
-	}
-
 	var serverType *hcloud.ServerType
 	var serverTypeGetError error
 	if params.Type == "auto" {
@@ -104,11 +82,32 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 		fmt.Print("❌ Cannot determine server details: ")
 		return serverTypeGetError
 	}
+
+	// if the image selector starts with "l#", it is a label selector; prepare the list options accordingly
+	listOptions := hcloud.ListOpts{}
+	if isLabelSelector(params.Image) {
+		listOptions.LabelSelector = strings.TrimPrefix(params.Image, labelSelectorPrefix)
+	}
+	images, _, imageListError := client.Image.List(context.Background(), hcloud.ImageListOpts{
+		Type:         []hcloud.ImageType{hcloud.ImageTypeSnapshot, hcloud.ImageTypeSystem},
+		Status:       []hcloud.ImageStatus{hcloud.ImageStatusAvailable},
+		Architecture: []hcloud.Architecture{serverType.Architecture},
+		ListOpts:     listOptions,
+	})
+	if imageListError != nil {
+		return imageListError
+	}
+
+	image, imageSelectionError := imageSelection(images, params.Image)
+	if imageSelectionError != nil {
+		return imageSelectionError
+	}
+
 	fmt.Printf(
 		"\t\tType:  %+v [%s]\n\t\tImage: %+v\n",
 		serverType.Description,
 		determineArchitectureString(serverType.Architecture),
-		params.Image,
+		image.Name,
 	)
 
 	userDataBuffer := &bytes.Buffer{}
@@ -130,7 +129,7 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 		Location: &hcloud.Location{
 			Name: params.Location,
 		},
-		Image:    &image,
+		Image:    image,
 		UserData: userDataBuffer.String(),
 	})
 	if serverCreateError != nil {
@@ -201,6 +200,44 @@ func getAvailableServerTypesByLocation(client *hcloud.Client, locationName strin
 		}
 		return serverType
 	}), nil
+}
+
+// imageSelection selects an image based on the image selector
+func imageSelection(images []*hcloud.Image, imageSelector string) (*hcloud.Image, error) {
+	var filteredImages []*hcloud.Image
+
+	if isLabelSelector(imageSelector) {
+		sort.SliceStable(images, func(i, j int) bool {
+			return images[i].Created.After(images[j].Created)
+		})
+		filteredImages = images
+	} else if strings.HasSuffix(imageSelector, latestImageSuffix) {
+		imageSelector := strings.TrimSuffix(imageSelector, latestImageSuffix)
+		filteredImages = helper.Filter(images, func(image *hcloud.Image) bool {
+			return strings.Contains(image.Name, imageSelector)
+		})
+		sort.SliceStable(filteredImages, func(i, j int) bool {
+			return filteredImages[i].OSVersion > filteredImages[j].OSVersion
+		})
+	} else {
+		filteredImages = helper.Filter(images, func(image *hcloud.Image) bool {
+			return image.Name == imageSelector
+		})
+	}
+
+	if len(filteredImages) == 0 {
+		return nil, fmt.Errorf("no images found for selector %+q", imageSelector)
+	}
+
+	return &hcloud.Image{
+		ID:   filteredImages[0].ID,
+		Name: filteredImages[0].Name,
+	}, nil
+}
+
+// isLabelSelector checks if the image selector is a label selector
+func isLabelSelector(imageSelector string) bool {
+	return strings.HasPrefix(imageSelector, labelSelectorPrefix)
 }
 
 // automaticServerSelection selects a server type based on the architecture and CPU type
