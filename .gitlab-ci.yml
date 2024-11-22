@@ -21,7 +21,7 @@ include:
   - { project: bonsai-oss/organization/automate/ci-templates, file: templates/release/kaniko.yml }
 
 integration test:
-  image: golang:1.22
+  image: golang:1.23
   stage: test
   needs:
     - go test
@@ -46,7 +46,7 @@ integration test:
     - ./bin/hmp cleanup --job-id "$CI_JOB_ID"
 
 build release binaries:
-  image: golang:1.22
+  image: golang:1.23
   stage: build
   parallel:
     matrix:
