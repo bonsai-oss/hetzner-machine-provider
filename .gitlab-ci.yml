@@ -28,6 +28,8 @@ integration test:
   parallel:
     matrix:
       - CUSTOM_ENV_CI_JOB_IMAGE:
+          - label#foo=bar
+      - CUSTOM_ENV_CI_JOB_IMAGE:
           - debian-12
           - ubuntu:latest
         CUSTOM_ENV_HCLOUD_SERVER_TYPE:
@@ -37,6 +39,15 @@ integration test:
           - arm64
   before_script:
     - make build
+    - |
+      if test "$CUSTOM_ENV_CI_JOB_IMAGE" = "label#foo=bar"; then
+        go install github.com/hetznercloud/cli/cmd/hcloud@latest
+        export KEY_NAME=hmp-ssh-key-${CI_JOB_ID}
+        mkdir ~/.ssh ; ssh-keygen -t ed25519 -N "" -f ~/.ssh/id_ed25519
+        hcloud ssh-key create --name $KEY_NAME --public-key-from-file ~/.ssh/id_ed25519.pub
+        hcloud server create --name hmp-snapshot-base-${CI_JOB_ID} --image debian-12 --type cpx11 --ssh-key $KEY_NAME
+        hcloud server create-image --type snapshot --label 'foo=bar' --label "job-id=${CI_JOB_ID}" hmp-snapshot-base-${CI_JOB_ID} --description "hmp-${CI_JOB_ID}"
+      fi
   script:
     - ./bin/hmp --version
     - ./bin/hmp prepare --job-id "$CI_JOB_ID"
@@ -44,7 +55,12 @@ integration test:
     - ./bin/hmp exec <(echo -e '#!/usr/bin/env bash\necho "Hello, World!"') test2 | grep "Hello, World!"
   after_script:
     - ./bin/hmp cleanup --job-id "$CI_JOB_ID"
-
+    - |
+      if test "$CUSTOM_ENV_CI_JOB_IMAGE" = "label#foo=bar"; then
+        hcloud server delete hmp-snapshot-base-${CI_JOB_ID}
+        hcloud image list --type snapshot --output noheader --selector "job-id=${CI_JOB_ID}" | awk '/snapshot/{print $1}' | xargs -n 1 hcloud image delete
+        hcloud ssh-key delete hmp-ssh-key-${CI_JOB_ID}
+      fi
 build release binaries:
   image: golang:1.23
   stage: build

@@ -103,11 +103,16 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 		return imageSelectionError
 	}
 
+	imageDisplayName := image.Name
+	if image.Name == "" {
+		imageDisplayName = fmt.Sprintf("id=%d", image.ID)
+	}
+
 	fmt.Printf(
 		"\t\tType:  %+v [%s]\n\t\tImage: %+v\n",
 		serverType.Description,
 		determineArchitectureString(serverType.Architecture),
-		image.Name,
+		imageDisplayName,
 	)
 
 	userDataBuffer := &bytes.Buffer{}
