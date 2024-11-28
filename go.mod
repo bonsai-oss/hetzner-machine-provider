@@ -8,8 +8,8 @@ require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/fatih/color v1.18.0
-	github.com/hetznercloud/hcloud-go/v2 v2.16.0
-	github.com/stretchr/testify v1.9.0
+	github.com/hetznercloud/hcloud-go/v2 v2.17.0
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.29.0
 )
 
