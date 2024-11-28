@@ -154,7 +154,7 @@ func Prepare(client *hcloud.Client, options PrepareOptions, params VMParams) err
 	if waitReachableError := helper.WaitReachable(waitDeadlineContext, privateKey, createResult.Server.PublicNet.IPv4.IP.String()); waitReachableError != nil {
 		return waitReachableError
 	}
-	fmt.Println("✅ Server created")
+	fmt.Println("✅ Server created, took", time.Since(createResult.Server.Created).Round(time.Second))
 
 	state := helper.State{
 		ServerAddress: createResult.Server.PublicNet.IPv4.IP.String(),
