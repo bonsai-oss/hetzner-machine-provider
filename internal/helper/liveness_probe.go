@@ -27,7 +27,8 @@ func WaitReachable(ctx context.Context, privateKey, serverAddress string) error 
 			fmt.Printf("\t\tServer not ready yet: %+q ... retrying (%s remaining)\n", err.Error(), time.Until(deadline).Round(time.Second))
 		}),
 		retry.Attempts(0),
-		retry.Delay(2*time.Second),
+		retry.Delay(5*time.Second),
+		retry.DelayType(retry.FixedDelay),
 		retry.LastErrorOnly(true),
 		retry.Context(ctx),
 	)

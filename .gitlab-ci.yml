@@ -25,6 +25,8 @@ integration test:
   stage: test
   needs:
     - go test
+  variables:
+    CUSTOM_ENV_HMP_SERVER_WAIT_DEADLINE: 10m
   parallel:
     matrix:
       - CUSTOM_ENV_CI_JOB_IMAGE:
@@ -61,6 +63,7 @@ integration test:
         hcloud image list --type snapshot --output noheader --selector "job-id=${CI_JOB_ID}" | awk '/snapshot/{print $1}' | xargs -n 1 hcloud image delete
         hcloud ssh-key delete hmp-ssh-key-${CI_JOB_ID}
       fi
+
 build release binaries:
   image: golang:1.23
   stage: build
